@@ -13,6 +13,9 @@ RUN a2enmod remoteip \
 &&  touch /etc/apache2/conf-available/remoteip.conf \
 &&  a2enconf remoteip
 
+# Use the default production configuration
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 RUN apt-get clean \
 &&  apt-get -y autoremove --purge \
 &&  rm -rf /var/lib/apt/lists/*
