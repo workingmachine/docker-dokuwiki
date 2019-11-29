@@ -16,6 +16,10 @@ RUN a2enmod remoteip \
 &&  touch /etc/apache2/conf-available/remoteip.conf \
 &&  a2enconf remoteip
 
+RUN a2enmod headers \
+&&  touch /etc/apache2/conf-available/headers.conf \
+&&  a2enconf headers
+
 # Use the default production configuration
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
