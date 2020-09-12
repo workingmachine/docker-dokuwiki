@@ -1,28 +1,59 @@
-FROM php:7.2-apache
-RUN apt-get update -y -q \
-&&  apt-get dist-upgrade -y -q \
-&&  apt-get install -y -q --no-install-recommends \
-        libwebp-dev \
+FROM php:7.3-apache
+
+# install the PHP extensions
+RUN set -ex; \
+    \
+    savedAptMark="$(apt-mark showmanual)"; \
+    \
+    apt-get update -y -q; \
+    apt-get install -y -q --no-install-recommends \
         libfreetype6-dev \
-        libjpeg62-turbo-dev \
-        libpng-dev
+        libjpeg-dev \
+        libpng-dev \
+        libwebp-dev \
+    ; \
+    rm -rf /var/lib/apt/lists/*; \
+    \
+    docker-php-ext-configure gd \
+    --with-freetype-dir=/usr \
+    --with-png-dir=/usr \
+    --with-jpeg-dir=/usr \
+    --with-webp-dir=/usr \
+    ; \
+    \
+    docker-php-ext-install -j "$(nproc)" \
+        gd \
+    ; \
+    \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+    apt-mark auto '.*' > /dev/null; \
+    apt-mark manual $savedAptMark; \
+    ldd "$(php -r 'echo ini_get("extension_dir");')"/*.so \
+        | awk '/=>/ { print $3 }' \
+        | sort -u \
+        | xargs -r dpkg-query -S \
+        | cut -d: -f1 \
+        | sort -u \
+        | xargs -rt apt-mark manual; \
+    \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-configure gd \
-    --with-webp-dir=/usr/include/ \
-    --with-jpeg-dir=/usr/include/
-RUN docker-php-ext-install -j$(nproc) gd
+# set recommended PHP.ini settings
 
-RUN a2enmod remoteip \
-&&  touch /etc/apache2/conf-available/remoteip.conf \
-&&  a2enconf remoteip
-
-RUN a2enmod headers \
-&&  touch /etc/apache2/conf-available/headers.conf \
-&&  a2enconf headers
-
-# Use the default production configuration
+# use the default production configuration
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-RUN apt-get clean \
-&&  apt-get -y autoremove --purge \
-&&  rm -rf /var/lib/apt/lists/*
+# set php symbolic link
+RUN ln -s /usr/local/bin/php /usr/bin/php
+
+# enable apache modules and configuration
+RUN set -ex; \
+    \
+    a2enmod remoteip; \
+    touch /etc/apache2/conf-available/remoteip.conf; \
+    a2enconf remoteip; \
+    \
+    a2enmod headers; \
+    touch /etc/apache2/conf-available/headers.conf; \
+    a2enconf headers;
