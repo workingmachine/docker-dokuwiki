@@ -56,3 +56,9 @@ RUN set -ex; \
     a2enmod headers; \
     touch /etc/apache2/conf-available/headers.conf; \
     a2enconf headers;
+
+# set timezone
+ENV TZ=Europe/Vienna
+RUN set -ex; \
+    ln --symbolic --no-dereference --force /usr/share/zoneinfo/$TZ /etc/localtime; \
+    echo $TZ > /etc/timezone
