@@ -1,6 +1,14 @@
 FROM php:8.2-apache
 
-# install the PHP extensions
+RUN set -ex; \
+    \
+    apt-get update -y -q; \
+    apt-get install -y -q --no-install-recommends \
+        apt-utils \
+    ; \
+    rm -rf /var/lib/apt/lists/*
+
+# install PHP extensions
 RUN set -ex; \
     \
     savedAptMark="$(apt-mark showmanual)"; \
